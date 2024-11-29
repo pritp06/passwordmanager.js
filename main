@@ -100,7 +100,6 @@ function deletePassword(service) {
 }
 function listPasswords(passKey) {
     if (passKey === '4406') {
-        const passwords = loadPasswords();
         if (Object.keys(passwords).length > 0) {
             console.log("Stored passwords:");
             for (const [service, password] of Object.entries(passwords)) {
