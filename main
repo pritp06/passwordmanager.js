@@ -40,12 +40,13 @@ function loadDeletedPasswords() {
     }
 }
 
-
-function saveDeletedPasswords(deletedPasswords) {
-    try {
-        fs.writeFileSync(DELETED_PASSWORD_FILE, JSON.stringify(deletedPasswords, null, 4), 'utf-8');
-    } catch (error) {
-        console.error("Error saving deleted passwords:", error);
+function saveDeletedPasswords() {
+    if (changesMade) {
+        try {
+            fs.writeFileSync(DELETED_PASSWORD_FILE, JSON.stringify(deletedPasswords, null, 4), 'utf-8');
+        } catch (error) {
+            console.error("Error saving deleted passwords:", error);
+        }
     }
 }
 
@@ -75,6 +76,7 @@ function getPassword(service) {
         console.log(`No password found for '${service}'.`);
     }
 }
+
 function deletePassword(service) {
     if (!service) {
         console.log("Service name cannot be empty.");
@@ -98,6 +100,7 @@ function deletePassword(service) {
         }
     }
 }
+
 function listPasswords(passKey) {
     if (passKey === '4406') {
         if (Object.keys(passwords).length > 0) {
@@ -115,9 +118,6 @@ function listPasswords(passKey) {
 
 function recoverPasswords(passKey) {
     if (passKey === '4406') {
-        const passwords = loadPasswords();
-        const deletedPasswords = loadDeletedPasswords();
-
         // Avoid overwriting existing passwords during recovery
         const conflicts = Object.keys(deletedPasswords).filter((key) => passwords[key]);
         if (conflicts.length > 0) {
@@ -126,14 +126,9 @@ function recoverPasswords(passKey) {
             );
         }
 
-        const recoveredPasswords = { ...passwords, ...deletedPasswords };
-        savePasswords(recoveredPasswords);
-
-        // Clear deleted passwords file after recovery
-        if (fs.existsSync(DELETED_PASSWORD_FILE)) {
-            fs.unlinkSync(DELETED_PASSWORD_FILE);
-        }
-
+        passwords = { ...passwords, ...deletedPasswords };
+        deletedPasswords = {}; // Clear deleted passwords
+        changesMade = true; // Mark as changed
         console.log("Deleted passwords have been recovered successfully!");
     } else {
         console.log("Invalid pass key. Recovery failed.");
@@ -141,7 +136,6 @@ function recoverPasswords(passKey) {
 }
 
 function showPasswordCount() {
-    const passwords = loadPasswords();
     const count = Object.keys(passwords).length;
 
     if (count > 0) {
@@ -200,6 +194,8 @@ async function main() {
             showPasswordCount();
         } else if (choice === '7') {
             console.log("Exiting the Password Manager. Goodbye!");
+            savePasswords();  // Save before exiting
+            saveDeletedPasswords();  // Save deleted passwords before exiting
             rl.close();
             break;
         } else {
