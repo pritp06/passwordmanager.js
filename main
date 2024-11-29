@@ -20,25 +20,26 @@ function loadPasswords() {
     }
 }
 
-function savePasswords(passwords) {
-    try {
-        fs.writeFileSync(PASSWORD_FILE, JSON.stringify(passwords, null, 4), 'utf-8');
-    } catch (error) {
-        console.error("Error saving passwords:", error);
+function savePasswords() {
+    if (changesMade) {
+        try {
+            fs.writeFileSync(PASSWORD_FILE, JSON.stringify(passwords, null, 4), 'utf-8');
+            changesMade = false; // Reset flag after saving
+        } catch (error) {
+            console.error("Error saving passwords:", error);
+        }
     }
 }
 
 function loadDeletedPasswords() {
-    if (fs.existsSync(DELETED_PASSWORD_FILE)) {
-        try {
-            return JSON.parse(fs.readFileSync(DELETED_PASSWORD_FILE, 'utf-8'));
-        } catch (error) {
-            console.error("Error reading deleted passwords file. Starting with an empty deleted password list.");
-            return {};
-        }
+    try {
+        return fs.existsSync(DELETED_PASSWORD_FILE) ? JSON.parse(fs.readFileSync(DELETED_PASSWORD_FILE, 'utf-8')) : {};
+    } catch (error) {
+        console.error("Error reading deleted passwords file. Starting with an empty deleted password list.");
+        return {};
     }
-    return {};
 }
+
 
 function saveDeletedPasswords(deletedPasswords) {
     try {
