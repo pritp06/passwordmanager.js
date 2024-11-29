@@ -81,29 +81,23 @@ function deletePassword(service) {
         return;
     }
 
-    let passwords = loadPasswords();
-    let deletedPasswords = loadDeletedPasswords();
-
     if (service.toLowerCase() === 'delete all') {
         deletedPasswords = { ...deletedPasswords, ...passwords };
         passwords = {};
-        savePasswords(passwords);
-        saveDeletedPasswords(deletedPasswords);
+        changesMade = true; // Mark as changed
         console.log("All passwords have been deleted successfully!");
     } else {
         service = service.toLowerCase();
         if (passwords[service]) {
             deletedPasswords[service] = passwords[service];
             delete passwords[service];
-            savePasswords(passwords);
-            saveDeletedPasswords(deletedPasswords);
+            changesMade = true; // Mark as changed
             console.log(`Password for '${service}' deleted successfully!`);
         } else {
             console.log(`No password found for '${service}'.`);
         }
     }
 }
-
 function listPasswords(passKey) {
     if (passKey === '4406') {
         const passwords = loadPasswords();
