@@ -56,9 +56,8 @@ function addPassword(service, password) {
         return;
     }
 
-    const passwords = loadPasswords();
     passwords[service.toLowerCase()] = password; // Normalize service name
-    savePasswords(passwords);
+    changesMade = true; // Mark as changed
     console.log(`Password for '${service}' added successfully!`);
 }
 
@@ -68,15 +67,14 @@ function getPassword(service) {
         return;
     }
 
-    const passwords = loadPasswords();
     service = service.toLowerCase(); // Normalize service name
-    if (passwords[service]) {
-        console.log(`Password for '${service}': ${passwords[service]}`);
+    const password = passwords[service];
+    if (password) {
+        console.log(`Password for '${service}': ${password}`);
     } else {
         console.log(`No password found for '${service}'.`);
     }
 }
-
 function deletePassword(service) {
     if (!service) {
         console.log("Service name cannot be empty.");
