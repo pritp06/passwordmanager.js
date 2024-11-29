@@ -5,17 +5,19 @@ const readline = require('readline');
 const PASSWORD_FILE = 'passwords.json';
 const DELETED_PASSWORD_FILE = 'deleted_passwords.json';
 
-// Utility functions for file operations
+// In-memory store for passwords and deleted passwords
+let passwords = loadPasswords();
+let deletedPasswords = loadDeletedPasswords();
+let changesMade = false; // Flag to track if any changes were made
+
+// Utility function for file operations
 function loadPasswords() {
-    if (fs.existsSync(PASSWORD_FILE)) {
-        try {
-            return JSON.parse(fs.readFileSync(PASSWORD_FILE, 'utf-8'));
-        } catch (error) {
-            console.error("Error reading passwords file. Starting with an empty password list.");
-            return {};
-        }
+    try {
+        return fs.existsSync(PASSWORD_FILE) ? JSON.parse(fs.readFileSync(PASSWORD_FILE, 'utf-8')) : {};
+    } catch (error) {
+        console.error("Error reading passwords file. Starting with an empty password list.");
+        return {};
     }
-    return {};
 }
 
 function savePasswords(passwords) {
