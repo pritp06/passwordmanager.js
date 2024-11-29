@@ -1,0 +1,218 @@
+const fs = require('fs');
+const readline = require('readline');
+
+// File paths
+const PASSWORD_FILE = 'passwords.json';
+const DELETED_PASSWORD_FILE = 'deleted_passwords.json';
+
+// Utility functions for file operations
+function loadPasswords() {
+    if (fs.existsSync(PASSWORD_FILE)) {
+        try {
+            return JSON.parse(fs.readFileSync(PASSWORD_FILE, 'utf-8'));
+        } catch (error) {
+            console.error("Error reading passwords file. Starting with an empty password list.");
+            return {};
+        }
+    }
+    return {};
+}
+
+function savePasswords(passwords) {
+    try {
+        fs.writeFileSync(PASSWORD_FILE, JSON.stringify(passwords, null, 4), 'utf-8');
+    } catch (error) {
+        console.error("Error saving passwords:", error);
+    }
+}
+
+function loadDeletedPasswords() {
+    if (fs.existsSync(DELETED_PASSWORD_FILE)) {
+        try {
+            return JSON.parse(fs.readFileSync(DELETED_PASSWORD_FILE, 'utf-8'));
+        } catch (error) {
+            console.error("Error reading deleted passwords file. Starting with an empty deleted password list.");
+            return {};
+        }
+    }
+    return {};
+}
+
+function saveDeletedPasswords(deletedPasswords) {
+    try {
+        fs.writeFileSync(DELETED_PASSWORD_FILE, JSON.stringify(deletedPasswords, null, 4), 'utf-8');
+    } catch (error) {
+        console.error("Error saving deleted passwords:", error);
+    }
+}
+
+// Core functionality
+function addPassword(service, password) {
+    if (!service || !password) {
+        console.log("Service and password cannot be empty.");
+        return;
+    }
+
+    const passwords = loadPasswords();
+    passwords[service.toLowerCase()] = password; // Normalize service name
+    savePasswords(passwords);
+    console.log(`Password for '${service}' added successfully!`);
+}
+
+function getPassword(service) {
+    if (!service) {
+        console.log("Service name cannot be empty.");
+        return;
+    }
+
+    const passwords = loadPasswords();
+    service = service.toLowerCase(); // Normalize service name
+    if (passwords[service]) {
+        console.log(`Password for '${service}': ${passwords[service]}`);
+    } else {
+        console.log(`No password found for '${service}'.`);
+    }
+}
+
+function deletePassword(service) {
+    if (!service) {
+        console.log("Service name cannot be empty.");
+        return;
+    }
+
+    let passwords = loadPasswords();
+    let deletedPasswords = loadDeletedPasswords();
+
+    if (service.toLowerCase() === 'delete all') {
+        deletedPasswords = { ...deletedPasswords, ...passwords };
+        passwords = {};
+        savePasswords(passwords);
+        saveDeletedPasswords(deletedPasswords);
+        console.log("All passwords have been deleted successfully!");
+    } else {
+        service = service.toLowerCase();
+        if (passwords[service]) {
+            deletedPasswords[service] = passwords[service];
+            delete passwords[service];
+            savePasswords(passwords);
+            saveDeletedPasswords(deletedPasswords);
+            console.log(`Password for '${service}' deleted successfully!`);
+        } else {
+            console.log(`No password found for '${service}'.`);
+        }
+    }
+}
+
+function listPasswords(passKey) {
+    if (passKey === '4406') {
+        const passwords = loadPasswords();
+        if (Object.keys(passwords).length > 0) {
+            console.log("Stored passwords:");
+            for (const [service, password] of Object.entries(passwords)) {
+                console.log(` - ${service}: ${password}`);
+            }
+        } else {
+            console.log("No passwords stored.");
+        }
+    } else {
+        console.log("Invalid pass key. Access denied.");
+    }
+}
+
+function recoverPasswords(passKey) {
+    if (passKey === '4406') {
+        const passwords = loadPasswords();
+        const deletedPasswords = loadDeletedPasswords();
+
+        // Avoid overwriting existing passwords during recovery
+        const conflicts = Object.keys(deletedPasswords).filter((key) => passwords[key]);
+        if (conflicts.length > 0) {
+            console.log(
+                `Warning: The following passwords already exist and won't be overwritten: ${conflicts.join(', ')}`
+            );
+        }
+
+        const recoveredPasswords = { ...passwords, ...deletedPasswords };
+        savePasswords(recoveredPasswords);
+
+        // Clear deleted passwords file after recovery
+        if (fs.existsSync(DELETED_PASSWORD_FILE)) {
+            fs.unlinkSync(DELETED_PASSWORD_FILE);
+        }
+
+        console.log("Deleted passwords have been recovered successfully!");
+    } else {
+        console.log("Invalid pass key. Recovery failed.");
+    }
+}
+
+function showPasswordCount() {
+    const passwords = loadPasswords();
+    const count = Object.keys(passwords).length;
+
+    if (count > 0) {
+        console.log(`You have saved ${count} password(s).`);
+        console.log("Services with saved passwords:");
+        Object.keys(passwords).forEach((service) => console.log(` - ${service}`));
+    } else {
+        console.log("No passwords saved yet.");
+    }
+}
+
+// CLI interface
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+function prompt(question) {
+    return new Promise((resolve) => rl.question(question, resolve));
+}
+
+async function main() {
+    console.log("Welcome to the Password Manager!");
+
+    while (true) {
+        console.log("\nOptions:");
+        console.log("1. Add Password");
+        console.log("2. Get Password");
+        console.log("3. Delete Password");
+        console.log("4. Show All Passwords");
+        console.log("5. Recover Deleted Passwords");
+        console.log("6. Show Password Count and Names");
+        console.log("7. Exit");
+
+        const choice = await prompt("Select an option (1-7): ");
+
+        if (choice === '1') {
+            const service = await prompt("Enter the service name: ");
+            const password = await prompt("Enter the password: ");
+            addPassword(service, password);
+        } else if (choice === '2') {
+            const service = await prompt("Enter the service name: ");
+            getPassword(service);
+        } else if (choice === '3') {
+            const service = await prompt(
+                "Enter the service name (or type 'delete all' to delete all passwords): "
+            );
+            deletePassword(service);
+        } else if (choice === '4') {
+            const passKey = await prompt("Enter the pass key to view all stored passwords: ");
+            listPasswords(passKey);
+        } else if (choice === '5') {
+            const passKey = await prompt("Enter the pass key to recover deleted passwords: ");
+            recoverPasswords(passKey);
+        } else if (choice === '6') {
+            showPasswordCount();
+        } else if (choice === '7') {
+            console.log("Exiting the Password Manager. Goodbye!");
+            rl.close();
+            break;
+        } else {
+            console.log("Invalid option. Please select between 1 and 7.");
+        }
+    }
+}
+
+// Run the application
+main();
